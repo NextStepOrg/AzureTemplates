@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "virtualMachines_ScreenShotImage_name": {
-            "defaultValue": "ScreenShotImage",
+            "defaultValue": "",
             "type": "String"
         },
         "disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid": {
