@@ -3,6 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "dnsLabelPrefix": {
+            "defaultvalue": "cpltestvm20211123",
             "type": "String",
             "metadata": {
                 "description": "Unique DNS Name for the Storage Account where the Virtual Machine's disks will be placed."
