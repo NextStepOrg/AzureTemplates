@@ -1,0 +1,2 @@
+# AzureTemplates
+for DR acronis
