@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachines_ScreenShotImage_name": {
+            "value": null
+        },
+        "disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid": {
+            "value": null
+        },
+        "disks_screenshotimage_datadisk_externalid": {
+            "value": null
+        },
+        "networkInterfaces_screenshotimage948_externalid": {
+            "value": null
+        }
+    }
+}

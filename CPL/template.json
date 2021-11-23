@@ -1,0 +1,97 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachines_ScreenShotImage_name": {
+            "defaultValue": "ScreenShotImage",
+            "type": "String"
+        },
+        "disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid": {
+            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Compute/disks/ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6",
+            "type": "String"
+        },
+        "disks_screenshotimage_datadisk_externalid": {
+            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Compute/disks/screenshotimage_datadisk",
+            "type": "String"
+        },
+        "networkInterfaces_screenshotimage948_externalid": {
+            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Network/networkInterfaces/screenshotimage948",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2021-07-01",
+            "name": "[parameters('virtualMachines_ScreenShotImage_name')]",
+            "location": "eastus2",
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D4as_v4"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2019-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Windows",
+                        "name": "[concat(parameters('virtualMachines_ScreenShotImage_name'), '_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "id": "[parameters('disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid')]"
+                        },
+                        "deleteOption": "Detach"
+                    },
+                    "dataDisks": [
+                        {
+                            "lun": 0,
+                            "name": "[concat(parameters('virtualMachines_ScreenShotImage_name'), '_DataDisk')]",
+                            "createOption": "Attach",
+                            "caching": "None",
+                            "writeAcceleratorEnabled": false,
+                            "managedDisk": {
+                                "id": "[parameters('disks_screenshotimage_datadisk_externalid')]"
+                            },
+                            "deleteOption": "Detach",
+                            "toBeDetached": false
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachines_ScreenShotImage_name')]",
+                    "adminUsername": "localadmin",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true,
+                        "enableAutomaticUpdates": true,
+                        "patchSettings": {
+                            "patchMode": "AutomaticByOS",
+                            "assessmentMode": "ImageDefault"
+                        }
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[parameters('networkInterfaces_screenshotimage948_externalid')]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "https://screenshotimagegroupdiag.blob.core.windows.net/"
+                    }
+                },
+                "licenseType": "Windows_Server"
+            }
+        }
+    ]
+}
