@@ -2,95 +2,210 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "virtualMachines_ScreenShotImage_name": {
-            "defaultValue": "",
-            "type": "String"
+        "dnsLabelPrefix": {
+            "type": "String",
+            "metadata": {
+                "description": "Unique DNS Name for the Storage Account where the Virtual Machine's disks will be placed."
+            }
         },
-        "disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid": {
-            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Compute/disks/ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6",
-            "type": "String"
+        "adminUsername": {
+            "type": "String",
+            "metadata": {
+                "description": "Username for the Virtual Machine."
+            }
         },
-        "disks_screenshotimage_datadisk_externalid": {
-            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Compute/disks/screenshotimage_datadisk",
-            "type": "String"
+        "adminPassword": {
+            "type": "SecureString",
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
         },
-        "networkInterfaces_screenshotimage948_externalid": {
-            "defaultValue": "/subscriptions/87ad77b5-a52a-40b3-8fe4-0e75ef13f5a6/resourceGroups/ScreenShotImage_group/providers/Microsoft.Network/networkInterfaces/screenshotimage948",
-            "type": "String"
+        "vmSize": {
+            "type": "String",
+            "metadata": {
+                "description": "Size of VM"
+            }
+        },
+        "sizeOfEachDataDiskInGB": {
+            "type": "String",
+            "metadata": {
+                "description": "Size of each data disk in GB"
+            }
+        },
+        "location": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "String",
+            "metadata": {
+                "description": "Location for all resources."
+            }
         }
     },
-    "variables": {},
+    "variables": {
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'saddiskvm')]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnet1Name": "Subnet-1",
+        "subnet1Prefix": "10.0.0.0/24",
+        "imagePublisher": "MicrosoftWindowsServer",
+        "imageOffer": "WindowsServer",
+        "imageSKU": "2019-Datacenter",
+        "imageVersion": "latest",
+        "publicIPAddressName": "myPublicIP",
+        "publicIPAddressType": "Dynamic",
+        "storageAccountType": "Standard_LRS",
+        "virtualNetworkName": "myVNET",
+        "vmName": "myVM",
+        "nicName": "myNIC",
+        "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnet1Name'))]",
+        "networkSecurityGroupName": "default-NSG"
+    },
     "resources": [
         {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-02-01",
+            "name": "[variables('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[variables('storageAccountType')]"
+            },
+            "kind": "StorageV2"
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('dnsLabelPrefix')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-3389",
+                        "properties": {
+                            "priority": 1000,
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "destinationPortRange": "3389",
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "*",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-07-01",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet1Prefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-07-01",
+            "name": "[variables('nicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnet1Ref')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2021-07-01",
-            "name": "[parameters('virtualMachines_ScreenShotImage_name')]",
-            "location": "eastus2",
+            "apiVersion": "2020-12-01",
+            "name": "[variables('vmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_D4as_v4"
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2019-Datacenter",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "osType": "Windows",
-                        "name": "[concat(parameters('virtualMachines_ScreenShotImage_name'), '_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6')]",
-                        "createOption": "FromImage",
-                        "caching": "ReadWrite",
-                        "managedDisk": {
-                            "id": "[parameters('disks_ScreenShotImage_OsDisk_1_0baca7d2bb8143c3b8029f42a4cc5be6_externalid')]"
-                        },
-                        "deleteOption": "Detach"
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSKU')]",
+                        "version": "[variables('imageVersion')]"
                     },
                     "dataDisks": [
                         {
+                            "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]",
                             "lun": 0,
-                            "name": "[concat(parameters('virtualMachines_ScreenShotImage_name'), '_DataDisk')]",
-                            "createOption": "Attach",
-                            "caching": "None",
-                            "writeAcceleratorEnabled": false,
-                            "managedDisk": {
-                                "id": "[parameters('disks_screenshotimage_datadisk_externalid')]"
-                            },
-                            "deleteOption": "Detach",
-                            "toBeDetached": false
+                            "createOption": "Empty"
                         }
-                    ]
-                },
-                "osProfile": {
-                    "computerName": "[parameters('virtualMachines_ScreenShotImage_name')]",
-                    "adminUsername": "localadmin",
-                    "windowsConfiguration": {
-                        "provisionVMAgent": true,
-                        "enableAutomaticUpdates": true,
-                        "patchSettings": {
-                            "patchMode": "AutomaticByOS",
-                            "assessmentMode": "ImageDefault"
-                        }
-                    },
-                    "secrets": [],
-                    "allowExtensionOperations": true,
-                    "requireGuestProvisionSignal": true
+                    ],
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[parameters('networkInterfaces_screenshotimage948_externalid')]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
                         }
                     ]
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
                         "enabled": true,
-                        "storageUri": "https://screenshotimagegroupdiag.blob.core.windows.net/"
+                        "storageUri": "[reference(variables('storageAccountName'), '2019-06-01').primaryEndpoints['blob']]"
                     }
-                },
-                "licenseType": "Windows_Server"
+                }
             }
         }
     ]
